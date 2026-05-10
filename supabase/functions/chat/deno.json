@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "lint": {
+    "files": {
+      "include": ["index.ts", "prompts/formatting.ts", "prompts/actionFlags.ts", "prompts/modes.ts", "prompts/system.ts"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["index.ts", "prompts/formatting.ts", "prompts/actionFlags.ts", "prompts/modes.ts", "prompts/system.ts"]
+    }
+  }
+}

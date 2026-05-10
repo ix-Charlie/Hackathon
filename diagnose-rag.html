@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RAG Diagnostic Tool</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    .section { margin: 20px 0; padding: 15px; background: #252526; border-left: 3px solid #007acc; }
+    .error { color: #f48771; }
+    .success { color: #89d185; }
+    .warning { color: #dcdcaa; }
+    .info { color: #9cdcfe; }
+    button { padding: 10px 20px; background: #007acc; color: white; border: none; cursor: pointer; margin: 5px; }
+    button:hover { background: #005a9e; }
+    pre { background: #1e1e1e; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>🔍 RAG Pipeline Diagnostic</h1>
+  <button onclick="runDiagnostic()">Run Full Diagnostic</button>
+  <button onclick="clearLogs()">Clear</button>
+  
+  <div id="output"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    
+    const SUPABASE_URL = 'https://ztjigmguhsihbtqhmwrx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0amlnbWd1aHNpaGJ0cWhtd3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MTIwMzUsImV4cCI6MjA4MTM4ODAzNX0.DISNETtMFOWHzb8OAgomcZrFEKirEIPrUlAXx8psCWs';
+    
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    function log(message, type = 'info') {
+      const output = document.getElementById('output');
+      const div = document.createElement('div');
+      div.className = `section ${type}`;
+      div.innerHTML = message;
+      output.appendChild(div);
+    }
+    
+    window.clearLogs = function() {
+      document.getElementById('output').innerHTML = '';
+    }
+    
+    window.runDiagnostic = async function() {
+      clearLogs();
+      log('<h2>🚀 Starting RAG Diagnostic...</h2>', 'info');
+      
+      try {
+        // Step 1: Check Authentication
+        log('<h3>Step 1: Checking Authentication</h3>', 'info');
+        const { data: { user }, error: userError } = await window.supabase.auth.getUser();
+        
+        if (userError || !user) {
+          log(`❌ <strong>Authentication Failed!</strong><br>Error: ${userError?.message || 'No user'}<br><br>⚠️ Please sign in first!`, 'error');
+          return;
+        }
+        
+        log(`✅ User authenticated<br>• User ID: ${user.id}<br>• Email: ${user.email}`, 'success');
+        
+        // Step 2: Check Tenant
+        log('<h3>Step 2: Checking Tenant Association</h3>', 'info');
+        const { data: tenantMember, error: memberError } = await window.supabase
+          .from('tenant_members')
+          .select('tenant_id, role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (memberError) {
+          log(`❌ <strong>Tenant Check Failed!</strong><br>Error: ${memberError.message}`, 'error');
+          return;
+        }
+        
+        if (!tenantMember) {
+          log(`❌ <strong>NO TENANT FOUND!</strong><br><br>This is the problem! Your account has no tenant associated with it.<br>RAG requires a tenant_id to work.<br><br>📋 <strong>Fix:</strong> Run the fix-tenant.sql script in Supabase SQL Editor.`, 'error');
+          return;
+        }
+        
+        log(`✅ Tenant found<br>• Tenant ID: ${tenantMember.tenant_id}<br>• Role: ${tenantMember.role}`, 'success');
+        
+        // Step 3: Check Documents
+        log('<h3>Step 3: Checking Uploaded Documents</h3>', 'info');
+        const { data: documents, error: docsError } = await window.supabase
+          .from('documents')
+          .select('id, filename, status, mime_type, created_at')
+          .eq('tenant_id', tenantMember.tenant_id)
+          .order('created_at', { ascending: false });
+        
+        if (docsError) {
+          log(`❌ <strong>Document Check Failed!</strong><br>Error: ${docsError.message}`, 'error');
+          return;
+        }
+        
+        if (!documents || documents.length === 0) {
+          log(`⚠️ <strong>No documents found!</strong><br>Upload some files first in the Vault.`, 'warning');
+          return;
+        }
+        
+        log(`✅ Found ${documents.length} documents:<br><pre>${JSON.stringify(documents, null, 2)}</pre>`, 'success');
+        
+        // Step 4: Check Document Chunks
+        log('<h3>Step 4: Checking Document Chunks & Embeddings</h3>', 'info');
+        const { data: chunks, error: chunksError } = await window.supabase
+          .from('document_chunks')
+          .select('id, document_id, content, embedding')
+          .eq('tenant_id', tenantMember.tenant_id)
+          .limit(5);
+        
+        if (chunksError) {
+          log(`❌ <strong>Chunk Check Failed!</strong><br>Error: ${chunksError.message}`, 'error');
+          return;
+        }
+        
+        if (!chunks || chunks.length === 0) {
+          log(`❌ <strong>NO CHUNKS FOUND!</strong><br><br>Your documents haven't been processed into chunks yet.<br><br>📋 <strong>Possible causes:</strong><br>• Backend worker not running<br>• Documents failed to process<br>• Processing queue stuck`, 'error');
+          return;
+        }
+        
+        const chunksWithEmbeddings = chunks.filter(c => c.embedding && c.embedding.length > 0);
+        log(`✅ Found ${chunks.length} chunks<br>• With embeddings: ${chunksWithEmbeddings.length}<br>• Sample chunk content: "${chunks[0].content.substring(0, 100)}..."`, 'success');
+        
+        if (chunksWithEmbeddings.length === 0) {
+          log(`⚠️ <strong>No embeddings found!</strong><br>Chunks exist but haven't been embedded yet.`, 'warning');
+        }
+        
+        // Step 5: Test RAG Search
+        log('<h3>Step 5: Testing RAG Search Function</h3>', 'info');
+        
+        // First, let's search for any content that might match "alishba"
+        const { data: searchChunks, error: searchError } = await window.supabase
+          .from('document_chunks')
+          .select('id, content, metadata')
+          .eq('tenant_id', tenantMember.tenant_id)
+          .ilike('content', '%alishba%');
+        
+        if (searchError) {
+          log(`❌ Search test failed: ${searchError.message}`, 'error');
+        } else {
+          log(`🔍 Text search for "alishba": ${searchChunks?.length || 0} matches<br>${searchChunks?.length > 0 ? '<pre>' + JSON.stringify(searchChunks.slice(0, 2), null, 2) + '</pre>' : ''}`, searchChunks?.length > 0 ? 'success' : 'warning');
+        }
+        
+        // Also search for "shagufta"
+        const { data: searchChunks2, error: searchError2 } = await window.supabase
+          .from('document_chunks')
+          .select('id, content, metadata')
+          .eq('tenant_id', tenantMember.tenant_id)
+          .ilike('content', '%shagufta%');
+        
+        if (!searchError2) {
+          log(`🔍 Text search for "shagufta": ${searchChunks2?.length || 0} matches<br>${searchChunks2?.length > 0 ? '<pre>' + JSON.stringify(searchChunks2.slice(0, 2), null, 2) + '</pre>' : ''}`, searchChunks2?.length > 0 ? 'success' : 'warning');
+        }
+        
+        // Step 6: Check if hybrid search function exists
+        log('<h3>Step 6: Checking Hybrid Search Function</h3>', 'info');
+        try {
+          // We can't test with a real embedding easily, but we can check if the function exists
+          const { error: rpcError } = await window.supabase
+            .rpc('match_documents_hybrid', {
+              query_embedding: new Array(1536).fill(0), // dummy embedding
+              query_text: 'test',
+              p_tenant_id: tenantMember.tenant_id,
+              match_count: 1,
+              similarity_threshold: 0.9 // high threshold so it won't match
+            });
+          
+          if (rpcError && rpcError.message.includes('function') && rpcError.message.includes('does not exist')) {
+            log(`❌ <strong>Hybrid search function missing!</strong><br>The match_documents_hybrid RPC function doesn't exist in your database.`, 'error');
+          } else {
+            log(`✅ Hybrid search function exists and is callable`, 'success');
+          }
+        } catch (e) {
+          log(`⚠️ Could not test hybrid search: ${e.message}`, 'warning');
+        }
+        
+        // Summary
+        log('<h2>📊 Diagnostic Summary</h2>', 'info');
+        log(`
+          <strong>Status:</strong><br>
+          • Authentication: ✅<br>
+          • Tenant: ${tenantMember ? '✅' : '❌'}<br>
+          • Documents: ${documents?.length > 0 ? '✅' : '❌'}<br>
+          • Chunks: ${chunks?.length > 0 ? '✅' : '❌'}<br>
+          • Embeddings: ${chunksWithEmbeddings.length > 0 ? '✅' : '❌'}<br>
+          • Text matches: ${(searchChunks?.length || 0) + (searchChunks2?.length || 0) > 0 ? '✅' : '⚠️'}<br><br>
+          ${(searchChunks?.length || 0) + (searchChunks2?.length || 0) === 0 ? 
+            '<strong>⚠️ The names you\'re searching for might not be in the uploaded documents!</strong>' : 
+            '<strong>✅ Pipeline appears to be working! If chat still fails, check the backend /functions/chat logs.</strong>'}
+        `, 'info');
+        
+      } catch (error) {
+        log(`❌ <strong>Fatal Error:</strong><br>${error.message}<br><pre>${error.stack}</pre>`, 'error');
+      }
+    };
+  </script>
+</body>
+</html>

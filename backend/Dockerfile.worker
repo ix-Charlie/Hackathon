@@ -1,0 +1,26 @@
+# Worker Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build
+RUN npm run build
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+USER nodejs
+
+# Start worker — supports WORKER_TYPE env: "document" (default), "image"
+CMD ["sh", "-c", "if [ \"$WORKER_TYPE\" = 'image' ]; then node dist/imageWorker.js; else node dist/worker.js; fi"]

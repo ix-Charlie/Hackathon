@@ -1,0 +1,100 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+tmp/
+temp/
+uploads/
+
+# Security-sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.csr
+*.pub
+id_rsa
+id_rsa.pub
+*.keystore
+*.jks
+*.asc
+*.gpg
+secrets.json
+credentials.json
+service-account*.json
+firebase-adminsdk*.json
+google-credentials*.json
+aws-credentials
+.aws/
+gcp-credentials.json
+.gcp/
+*.env.*
+.env.production
+.env.development
+.env.staging
+.env.test
+
+# Database files and backups
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.bak
+db-backup*
+database-backup*
+
+# Document and media files
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+
+# Session and cache files
+*.session
+*.cache
+.cache/
+.tmp/
+.temp/
+
+# API keys and tokens
+*.token
+.secrets
+api-keys.txt
+

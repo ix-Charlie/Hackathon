@@ -1,0 +1,112 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.backup
+
+# Supabase temp files
+supabase/.temp/
+.temp/
+
+# Test files with sensitive data
+test-*.js
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Security-sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.csr
+*.pub
+id_rsa
+id_rsa.pub
+*.keystore
+*.jks
+*.asc
+*.gpg
+secrets.json
+credentials.json
+service-account*.json
+firebase-adminsdk*.json
+google-credentials*.json
+aws-credentials
+.aws/
+gcp-credentials.json
+.gcp/
+*.env.*
+.env.production
+.env.development
+.env.staging
+.env.test
+
+# Database files and backups
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.bak
+db-backup*
+database-backup*
+
+# Document and media files (useless for version control)
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.iso
+*.dmg
+*.pkg
+
+# Session and cache files
+*.session
+*.cache
+.cache/
+.tmp/
+.temp/
+tmp/
+temp/
+
+# API keys and tokens
+*.token
+.secrets
+api-keys.txt
+auth_test.txt

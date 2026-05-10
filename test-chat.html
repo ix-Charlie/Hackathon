@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Endpoint Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    .log { margin: 10px 0; padding: 10px; background: #252526; border-left: 3px solid #007acc; }
+    .error { border-left-color: #f48771; }
+    .success { border-left-color: #89d185; }
+    button { padding: 10px 20px; background: #007acc; color: white; border: none; cursor: pointer; margin: 5px; }
+    pre { background: #1e1e1e; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Chat Endpoint Test</h1>
+  <button onclick="testChatEndpoint()">Test Chat</button>
+  <button onclick="clearLogs()">Clear</button>
+  
+  <div id="output"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    
+    const SUPABASE_URL = 'https://ztjigmguhsihbtqhmwrx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0amlnbWd1aHNpaGJ0cWhtd3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MTIwMzUsImV4cCI6MjA4MTM4ODAzNX0.DISNETtMFOWHzb8OAgomcZrFEKirEIPrUlAXx8psCWs';
+    
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    function log(message, type = 'log') {
+      const output = document.getElementById('output');
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.innerHTML = message;
+      output.appendChild(div);
+      output.scrollTop = output.scrollHeight;
+    }
+    
+    window.clearLogs = function() {
+      document.getElementById('output').innerHTML = '';
+    }
+    
+    window.testChatEndpoint = async function() {
+      clearLogs();
+      log('<strong>🚀 Testing Chat Endpoint...</strong>');
+      
+      try {
+        // Get session
+        const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          log('❌ <strong>Not authenticated!</strong> Please sign in first.', 'error');
+          return;
+        }
+        
+        log(`✅ Authenticated as: ${session.user.email}`);
+        
+        // Test chat with a simple question
+        log('📤 Sending test message: "who is alishba"');
+        
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            message: 'who is alishba',
+            history: [],
+            files: [],
+            use_rag: true,
+            show_thinking: false,
+            temperature: 0.3
+          }),
+        });
+        
+        log(`📥 Response status: ${response.status} ${response.statusText}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`❌ <strong>Request failed!</strong><br><pre>${errorText}</pre>`, 'error');
+          
+          if (response.status === 500 && errorText.includes('Server configuration error')) {
+            log('💡 <strong>This means OPENAI_API_KEY is not set in Supabase!</strong><br>Go to Supabase Dashboard → Project Settings → Edge Functions → Add OPENAI_API_KEY secret', 'error');
+          }
+          return;
+        }
+        
+        log('✅ Response OK, reading stream...', 'success');
+        
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let hasContent = false;
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\\n');
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.substring(6));
+                log(`📦 Received: <pre>${JSON.stringify(data, null, 2)}</pre>`);
+                if (data.type === 'content') hasContent = true;
+              } catch (e) {
+                log(`⚠️ Parse error: ${line}`);
+              }
+            }
+          }
+        }
+        
+        if (hasContent) {
+          log('✅ <strong>Chat endpoint is working!</strong>', 'success');
+        } else {
+          log('⚠️ <strong>No content received - RAG might be failing silently</strong>', 'error');
+        }
+        
+      } catch (error) {
+        log(`❌ <strong>Error:</strong><br>${error.message}<br><pre>${error.stack}</pre>`, 'error');
+      }
+    };
+  </script>
+</body>
+</html>

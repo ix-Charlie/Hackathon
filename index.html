@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Horizon - AI Legal Associate</title>
+    <meta name="description" content="Horizon is an enterprise AI legal associate that helps legal professionals with research, contract review, and document analysis." />
+
+    <!-- Preconnect to font CDN for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Non-render-blocking font loading -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+    </noscript>
+
+    <!-- Preload above-the-fold logos -->
+    <link rel="preload" href="/horizon-logo-white.webp" as="image" type="image/webp" />
+    <link rel="preload" href="/horizon-logo-black.webp" as="image" type="image/webp" />
+  </head>
+  <body class="bg-white dark:bg-gray-900 text-charcoal dark:text-gray-100">
+    <!-- Inline script to prevent dark mode flash -->
+    <script>
+      (function() {
+        var pref = localStorage.getItem('horizon_theme');
+        if (!pref) {
+          var old = localStorage.getItem('horizon_dark_mode');
+          if (old !== null) {
+            pref = old === 'true' ? 'dark' : 'light';
+            localStorage.setItem('horizon_theme', pref);
+            localStorage.removeItem('horizon_dark_mode');
+          } else {
+            pref = 'system';
+          }
+        }
+        var isDark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
